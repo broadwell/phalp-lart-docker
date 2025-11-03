@@ -12,12 +12,14 @@ RUN apt-get update && \
 
 ENV PATH="/opt/conda/bin:$PATH"
 ENV CUDA_HOME="/usr/local/cuda"
+ENV CI="true"
 
 COPY . /app/
 
 RUN mkdir /usr/lib/dri && ln -s /usr/lib/x86_64-linux-gnu/dri/swrast_dri.so /usr/lib/dri/
 
-RUN conda create -n phalp python=3.10
+RUN conda
+RUN conda create -n phalp python=3.10 mkl=2023.*
 RUN echo "source activate phalp" > /root/.bashrc
 ENV PATH="/opt/conda/envs/phalp/bin:$PATH"
 
@@ -37,11 +39,13 @@ RUN cd /app/LART && TORCH_CUDA_ARCH_LIST="8.6 8.7 8.9" conda run -n phalp pip in
 
 RUN cd /app/PHALP && TORCH_CUDA_ARCH_LIST="8.6 8.7 8.9" conda run -n phalp pip install -e .[all]
 
+RUN cd /app && wget https://huggingface.co/spaces/brjathu/HMR2.0/resolve/e5201da358ccbc04f4a5c4450a302fcb9de571dd/data/smpl/basicModel_neutral_lbs_10_207_0_v1.0.0.pkl
+
 # One of these cp commands probably isn't necessary...
 RUN cp /app/basicModel_neutral_lbs_10_207_0_v1.0.0.pkl /app/PHALP/. && \
     mkdir -p /app/PHALP/data && cp /app/basicModel_neutral_lbs_10_207_0_v1.0.0.pkl /app/PHALP/data/.
 
-RUN conda run -n phalp python -m pytorch_lightning.utilities.upgrade_checkpoint /app/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt
+RUN if [ -f "/app/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt" ]; then conda run -n phalp python -m pytorch_lightning.utilities.upgrade_checkpoint /app/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt; fi
 
 ENTRYPOINT ["/app/process_video.sh"]
 CMD ["phalp_or_lart", "source_file"]
