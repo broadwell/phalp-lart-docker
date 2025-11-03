@@ -12,6 +12,7 @@ RUN apt-get update && \
 
 ENV PATH="/opt/conda/bin:$PATH"
 ENV CUDA_HOME="/usr/local/cuda"
+ENV CI=true
 
 COPY . /app/
 
